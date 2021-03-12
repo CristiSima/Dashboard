@@ -3,6 +3,11 @@ var ctx
 var fontsize=30
 var displaies=[]
 var format=null
+
+function split_element(request)
+{
+	return [request.slice(0,end=request.indexOf("|")),request.slice(request.indexOf("|")+1)]
+}
 function sleep(duration) {
     return new Promise(resolve => {
         setTimeout(() => {
@@ -25,11 +30,14 @@ requester=new class Requester
 		});
 		this.socket.addEventListener('message', function (event)
 		{
-		    requester.recv_queue.push(event.data);
+			var id,data
+			[id,data]=split_element(event.data)
+		    requester.recv_queue.push(data);
+			// console.log(id)
 		});
 		window.addEventListener('unload', function(event)
 		{
-			requester.Send("close")
+			requester.Send("close",false)
 		});
 	}
 	async Reserve()
@@ -42,13 +50,19 @@ requester=new class Requester
 	{
 		this.isfree=true
 	}
-	Send(data)
+	Send(data,header=true)
 	{
+		if(header)
+			header=Date.now()+"|"
+		else
+			header=""
+		data=header+data
 		this.socket.send(data);
+		return header
 	}
-	async Recv()
+	async Recv(header)
 	{
-		while (this.recv_queue.length==0) {
+		while (!(this.recv_queue.length!=0 && !split_element(this.recv_queue[0])[0].startsWith(header))) {
 			await sleep(10)
 		}
 		// console.log("recv");
@@ -57,14 +71,14 @@ requester=new class Requester
 	async Get(data)
 	{
 		this.Send(data)
-		data=this.Recv()
+		data=await this.Recv()
 		this.Free()
 		return data
 	}
 }
 async function setup()
 {
-	requester.Send("continuous")
+	requester.Send("continuous",false)
 	canvas = document.getElementById("Canvas");
 	ctx = canvas.getContext("2d");
 	ctx.font = String(fontsize)+"px Arial";
@@ -91,8 +105,10 @@ async function loop()
 		for(disp in displaies)
 		{
 			disp=displaies[disp]
-			await disp.UpdateData()
+			disp.UpdateDataRequest()
 		}
+		while(!displaies.every(function(disp){return disp.data_ready}))
+			await sleep(10)
 		ctx.clearRect(0, 0, canvas.width, canvas.height);
 		for(disp in displaies)
 		{
@@ -114,10 +130,20 @@ class Displayer_txt
 		this.x=x
 		this.y=y
 		this.alignment=alignment
+
+		this.data_ready=false
 	}
-	async UpdateData()
+	async UpdateDataRequest()
 	{
-		this.data=await requester.Get(this.request)
+		this.data_ready=false
+		var data=await requester.Get(this.request)
+		await this.UpdateData(data)
+		this.data_ready=true
+		// this.Draw()
+	}
+	async UpdateData(data)
+	{
+		this.data=data
 	}
 	DrawTitle()
 	{
@@ -134,7 +160,7 @@ class Displayer_txt
 		else
 			ctx.fillText(this.data,this.x+5+this.width/2,this.y+fontsize+5+fontsize);
 	}
-	Draw()
+	async Draw()
 	{
 		ctx.fillStyle = "#72BCD4";
 		ctx.fillRect(this.x,this.y,this.width,this.height);
@@ -163,9 +189,9 @@ class Displayer_txt_multiline extends Displayer_txt
 			for(var i in this.data)
 				ctx.fillText(this.data[i],this.x+5+this.width/2	,this.y+fontsize+5+fontsize+i*(fontsize+5));
 	}
-	async UpdateData()
+	async UpdateData(data)
 	{
-		this.data=(await requester.Get(this.request)).split("\n")
+		this.data=data.split("\n")
 	}
 }
 
@@ -176,9 +202,9 @@ class Displayer_txt_columns extends Displayer_txt
 		super(name,request,x,y,width,height)
 		this.columns=columns
 	}
-	async UpdateData()
+	async UpdateData(data)
 	{
-		var data=(await requester.Get(this.request)).split("\n")
+		var data=data.split("\n")
 		this.data=[]
 		for(var i in data)
 		{
