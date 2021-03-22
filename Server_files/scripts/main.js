@@ -19,7 +19,8 @@ requester=new class Requester
 {
 	socket;
 	isfree=true;
-	recv_queue=[];
+	recv_queue={};
+	lastID=1
 	constructor()
 	{
 		this.socket=new WebSocket('ws://'+window.location.hostname+':5678');
@@ -32,8 +33,7 @@ requester=new class Requester
 		{
 			var id,data
 			[id,data]=split_element(event.data)
-		    requester.recv_queue.push(data);
-			// console.log(id)
+			requester.recv_queue[id]=data
 		});
 		window.addEventListener('unload', function(event)
 		{
@@ -52,27 +52,31 @@ requester=new class Requester
 	}
 	Send(data,header=true)
 	{
+		var headerP
 		if(header)
-			header=Date.now()+"|"
+		{
+			header=this.lastID.toString()
+			headerP=header+"|"
+			this.lastID++
+		}
 		else
-			header=""
-		data=header+data
+			headerP=header=""
+		data=headerP+data
 		this.socket.send(data);
 		return header
 	}
 	async Recv(header)
 	{
-		while (!(this.recv_queue.length!=0 && !split_element(this.recv_queue[0])[0].startsWith(header))) {
-			await sleep(10)
-		}
-		// console.log("recv");
-		return this.recv_queue.pop()
+		while(!(header in this.recv_queue))
+			await sleep(1)
+		var data=this.recv_queue[header]
+		delete this.recv_queue[header]
+		return data
 	}
 	async Get(data)
 	{
-		this.Send(data)
-		data=await this.Recv()
-		this.Free()
+		var header=this.Send(data)
+		data=await this.Recv(header)
 		return data
 	}
 }
@@ -96,7 +100,6 @@ async function main()
 	displaies.push(new Displayer_txt_columns("top","get|top",0,150,1200,720,format["Top"]))
 
 	await loop()
-	// alert(1)
 }
 async function loop()
 {
