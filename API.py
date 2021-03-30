@@ -1,6 +1,7 @@
 import os
 import time
 import subprocess
+import utils
 
 def split_element(req):
 	return req[:req.find("|")],req[req.find("|")+1:]
@@ -50,8 +51,7 @@ async def sysexec(websocket,req,header=""):
 
 async def get_space(websocket,req,header=""):
 	data=subprocess.run(["df","/dev/sda1","-h","--output=used,avail,pcent"], capture_output=True).stdout.decode("utf-8").split("\n")[1].strip()
-	while "  "in data:
-		data=data.replace("  "," ")
+	data=utils.collapse_spaces(data)
 	data=data.replace(" ","|")
 	await websocket.send(header+req+"|"+data)
 
@@ -62,18 +62,20 @@ async def get_docker(websocket,req,header=""):
 async def get_top(websocket,req,header=""):
 	data=subprocess.run(["top","-n","1","-bs"], capture_output=True).stdout.decode("utf-8").strip()#.split("\n")
 	temp,data=data[:data.find("\n%Cpu")+1],data[data.find("\n%Cpu")+1:]
+	data=data.split("\n\n")[0]
+	data=data.replace("%Cpu","")
+	
 	data=data.replace(","," ")
-	data=data[:data.find("PID")].replace(":"," ")+data[data.find("PID"):]
-	while "  "in data:
-		data=data.replace("  "," ")
+	data=data.replace(":"," ")
+	data=utils.collapse_spaces(data)
 	data="\n".join([line.strip() for line in data.split("\n")])
 	data=data.replace(" ","|")
-	data=data.replace("%Cpu","")
-	data=data.replace("|0.0m|","||").replace("|0.0m|","||")#remove no mem usage
-	data=data.replace("|S|0.0|","|S||").replace("|I|0.0|","|I||")#remove no CPU% usage
-	data=data.replace("|0.0|0:","||0:")#remove no mem% usage
-	data=data.replace("|0:00.00|","||")#remove no CPU time
-	await websocket.send(header+temp+data)
+
+	ps_data=subprocess.run("ps -eo pid,user,pcpu,pmem,cputime,command --sort -pcpu,-pmem",shell=True, capture_output=True).stdout.decode("utf-8").strip()#.split("\n")
+	ps_data=utils.collapse_spaces(ps_data)
+	ps_data="\n".join([line.strip().replace(" ","|",5) for line in ps_data.split("\n")])
+
+	await websocket.send(header+temp+data+"\n"+ps_data)
 	pass
 
 main={

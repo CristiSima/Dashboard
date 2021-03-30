@@ -51,16 +51,10 @@
 		[[
 			["PID","right",110],
 			["User","left",-150],
-			["PR","left",-150],
-			["NI","left",-150],
-			["Virt","right",260],
-			["Res","right",380],
-			["Shr","right",500],
-			["Stat","center",550],
-			["CPU%","right",680],
-			["Mem%","right",800],
-			["Time","right",940],
-			["command","left",965]
+			["CPU%","right",230],
+			["Mem%","right",350],
+			["Time","right",490],
+			["command","left",540]
 		],18,false]
 	]
 }
