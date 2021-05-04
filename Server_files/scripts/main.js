@@ -96,9 +96,9 @@ async function setup()
 async function main()
 {
 	await setup()
-	displaies.push(new Displayer_txt_columns("Space","get|space|Resmoc",0,0,450,120,format["Storage"]))
-	displaies.push(new Displayer_txt_columns("docker","get|docker",500,0,400,120,format["Containers"]))
-	displaies.push(new Displayer_txt_columns("top","get|top",0,150,1200,720,format["Top"]))
+	displaies.push(new Displayer_txt_columns("Space","module|status|space|Resmoc",0,0,450,120,format["Storage"]))
+	displaies.push(new Displayer_txt_columns("docker","module|status|docker",500,0,400,120,format["Containers"]))
+	displaies.push(new Displayer_txt_columns("top","module|status|top",0,150,1200,720,format["Top"]))
 
 	await loop()
 }

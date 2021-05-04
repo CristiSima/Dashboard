@@ -9,8 +9,11 @@ import http
 import http.server
 import os
 import API
-# path to .py
-os.chdir("/Servers/Dashboard")
+import pathlib
+
+# sets path to .py
+os.chdir(pathlib.Path(__file__).parent.absolute())
+
 extentionToMIME = {
 	"html" : "text/html",
 	"css" : "text/css",
