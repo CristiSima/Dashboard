@@ -1,26 +1,36 @@
+var Displaies_id_count=0;
 class Displayer_txt
 {
-	constructor(name,request,x,y,width,height,alignment="center")
+	constructor(name,request,x,y,width,height,refresh_rate,alignment="center")
 	{
-		this.name=name
-		this.request=request
-		this.height=height
-		this.width=width
-		this.x=x
-		this.y=y
-		this.alignment=alignment
+		this.name=name;
+		this.request=request;
+		this.height=height;
+		this.width=width;
+		this.x=x;
+		this.y=y;
+		this.refresh_rate=refresh_rate;
+		this.alignment=alignment;
+		this.id=Displaies_id_count++;
+
+		socket.on(String(this.id),(data) =>{this.Update(data)});
 
 		this.data_ready=false
 	}
-	async UpdateDataRequest()
+
+	MakeRequest()
 	{
-		this.data_ready=false
-		var data=await requester.Get(this.request)
-		await this.UpdateData(data)
-		this.data_ready=true
-		// this.Draw()
+		console.log(55,this.request);
+		socket.emit(this.request,String(this.id));
 	}
-	async UpdateData(data)
+
+	Update(data)
+	{
+		this.UpdateData(data);
+		this.Draw();
+		setTimeout(()=>{this.MakeRequest()},this.refresh_rate*1000)
+	}
+	UpdateData(data)
 	{
 		this.data=data
 	}
@@ -39,7 +49,7 @@ class Displayer_txt
 		else
 			ctx.fillText(this.data,this.x+5+this.width/2,this.y+fontsize+5+fontsize);
 	}
-	async Draw()
+	Draw()
 	{
 		ctx.fillStyle = "#72BCD4";
 		ctx.fillRect(this.x,this.y,this.width,this.height);
@@ -47,11 +57,6 @@ class Displayer_txt
 		this.DrawTitle()
 
 		this.DrawContent()
-	}
-	async Update()
-	{
-		await this.UpdateData()
-		this.Draw()
 	}
 }
 
@@ -68,7 +73,7 @@ class Displayer_txt_multiline extends Displayer_txt
 			for(var i in this.data)
 				ctx.fillText(this.data[i],this.x+5+this.width/2	,this.y+fontsize+5+fontsize+i*(fontsize+5));
 	}
-	async UpdateData(data)
+	UpdateData(data)
 	{
 		this.data=data.split("\n")
 	}
@@ -76,12 +81,12 @@ class Displayer_txt_multiline extends Displayer_txt
 
 class Displayer_txt_columns extends Displayer_txt
 {
-	constructor(name,request,x,y,width,height,columns)
+	constructor(name,request,x,y,width,height,refresh_rate,columns)
 	{
-		super(name,request,x,y,width,height)
+		super(name,request,x,y,width,height,refresh_rate)
 		this.columns=columns
 	}
-	async UpdateData(data)
+	UpdateData(data)
 	{
 		var data=data.split("\n")
 		this.data=[]

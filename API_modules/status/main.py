@@ -3,17 +3,23 @@ import time
 import subprocess
 import utils
 
-async def get_space(websocket,req,header=""):
-	data=subprocess.run(["df","/dev/sda1","-h","--output=used,avail,pcent"], capture_output=True).stdout.decode("utf-8").split("\n")[1].strip()
+from __main__ import app, socketio
+from flask_socketio import emit
+
+@socketio.event
+def get_space(id,header=""):
+	data=subprocess.run(["df","/dev/sda1","-h","--output=source,used,avail,pcent"], capture_output=True).stdout.decode("utf-8").split("\n")[1].strip()
 	data=utils.collapse_spaces(data)
 	data=data.replace(" ","|")
-	await websocket.send(header+req+"|"+data)
+	emit(id,header+data)
 
-async def get_docker(websocket,req,header=""):
+@socketio.event
+def get_docker(id,header=""):
 	data=subprocess.run(["docker","ps","--format","{{.Names}}|{{.State}}"], capture_output=True).stdout.decode("utf-8").strip()#.split("\n")
-	await websocket.send(header+data)
+	emit(id,header+data)
 
-async def get_top(websocket,req,header=""):
+@socketio.event
+def get_top(id,header=""):
 	data=subprocess.run(["top","-n","1","-bs"], capture_output=True).stdout.decode("utf-8").strip()#.split("\n")
 	temp,data=data[:data.find("\n%Cpu")+1],data[data.find("\n%Cpu")+1:]
 	data=data.split("\n\n")[0]
@@ -29,11 +35,4 @@ async def get_top(websocket,req,header=""):
 	ps_data=utils.collapse_spaces(ps_data)
 	ps_data="\n".join([line.strip().replace(" ","|",5) for line in ps_data.split("\n")])
 
-	await websocket.send(header+temp+data+"\n"+ps_data)
-	pass
-
-export={
-	"space":get_space,
-	"docker":get_docker,
-	"top":get_top
-}
+	emit(id,header+temp+data+"\n"+ps_data)
